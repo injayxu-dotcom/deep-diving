@@ -18,6 +18,7 @@ export function ClarifyStage() {
   const busy = useStore((s) => s.clarifyBusy);
   const product = useStore((s) => s.product);
   const apiKey = useStore((s) => s.settings.apiKey);
+  const model = useStore((s) => s.settings.model);
   const references = useStore((s) => s.references);
   const closingAsk = useStore((s) => s.closingAsk);
   const confirmFinish = useStore((s) => s.confirmFinish);
@@ -134,11 +135,23 @@ export function ClarifyStage() {
         ) : null}
 
         <div className="stage-top-acts">
+          {/* 配好之后仍然要留一个入口。原来这里只有「没配 Key」时才显示按钮，
+              配过的人在这张首屏上找不到任何设置入口 —— 想换模型、Key 过期了想重填，
+              都只能靠猜（设置弹窗本来只有画布顶栏能打开，而首屏不是画布阶段）。
+              所以做成两态：没配是主行动点，配了退成幽灵按钮，位置不变。 */}
           {!apiKey ? (
             <button className="btn aqua sm" onClick={openSettings}>
               配置 API Key
             </button>
-          ) : null}
+          ) : (
+            <button
+              className="btn ghost sm"
+              onClick={openSettings}
+              title={`当前模型：${model || '未填写'}（点击可更换服务商或替换 Key）`}
+            >
+              <Icon name="settings" /> AI 设置
+            </button>
+          )}
           {clarify.length > 0 && !busy ? (
             <button className={`btn sm ${aiRounds >= 2 ? 'pri' : 'ghost'}`} onClick={() => void finishClarify()}>
               够了，生成简报
