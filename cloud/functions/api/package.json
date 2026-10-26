@@ -1,0 +1,9 @@
+{
+  "name": "deepdiving-api",
+  "version": "1.0.0",
+  "description": "深度潜水云函数：AI 代理 + 工作区读写",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^2.7.0"
+  }
+}

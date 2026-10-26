@@ -1,0 +1,53 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# 本地私有配置（含云环境地址等，绝不提交）
+.env.local
+.env.*.local
+
+# 云函数真实配置：含 WS_TOKEN / LLM_API_KEY 等密钥，由 tools/cloud-config.mjs
+# 从 .env.local 生成。模板见同目录 cloudbaserc.example.json。
+cloud/functions/api/cloudbaserc.json
+
+# 云端配置导出（含密钥，仅供本机查阅，绝不提交）
+cloud-env.local.md
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Vite 中断时写出的配置文件副本（每次改配置都生成一份，无任何用途）
+vite.config.ts.timestamp-*.mjs
+
+# 临时工作目录：历史上的测试脚本与日志，未纳入版本控制
+.tmp/
+
+# 测试截图产物（体积大，无版本控制价值）
+tools/shots/
+
+# 日志
+*.log
+
+# UI 风格改版的前后对比截图（体积大，无版本控制价值）
+shots-before/
+shots-wip/
+shots-after/
+shots-b1/
+shots-b2/
+shots-b3/
+shots-b4/
+shots-before-v2/
+shots-after-v2/
+shots-b6/
+
+# WorkBuddy 本地项目数据与多模型协作体系（含本机绝对路径，仅本地使用）
+.workbuddy/
+collab/
+
+# 本机个人工具（含家目录绝对路径，不随项目发布）
+tools/make-desktop-shortcut.mjs
+tools/demo-recon.mjs

@@ -1,0 +1,18 @@
+{
+  "envId": "your-env-id",
+  "functions": [
+    {
+      "name": "deepdiving-api",
+      "runtime": "Nodejs18.15",
+      "handler": "index.main",
+      "memorySize": 256,
+      "timeout": 30,
+      "installDependency": true,
+      "envVariables": {
+        "TCB_ENV": "your-env-id",
+        "WS_TOKEN": "请勿手填：由 node tools/cloud-config.mjs 从 .env.local 生成",
+        "LLM_REQUIRE_TOKEN": "1"
+      }
+    }
+  ]
+}
