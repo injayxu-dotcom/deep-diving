@@ -99,6 +99,9 @@ function createWindow() {
     // 与 --ink-50 一致：窗口先画出来、页面还没渲染时不会闪一下白
     backgroundColor: '#f4efe6',
     title: '创意深潜 Deep Diving',
+    /* 打包后任务栏/标题栏取 exe 内嵌的图标（electron-builder 用 build/icon.ico 写入），
+       但开发态跑的是 node_modules 里那个 stock Electron exe —— 不指定就显示原子图标。 */
+    icon: app.isPackaged ? undefined : path.join(__dirname, '..', 'build', 'icon.png'),
     show: false,
     autoHideMenuBar: true,
     webPreferences: {

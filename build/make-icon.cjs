@@ -1,31 +1,36 @@
 /**
- * 从 DD logo.svg 生成 build/icon.png（512×512）。
+ * 从 DD logo.svg 生成应用图标：build/icon.png（512）+ 多尺寸 icon.ico。
  *
  * 不引 sharp / rsvg 之类：Electron 自己就是一个完整的渲染器，
  * 用它转一次省一个依赖，也省得在 Windows 上折腾原生模块编译。
  *
- * 跑法：node electron/launch.mjs 不支持指定脚本，所以直接
- *   env -u ELECTRON_RUN_AS_NODE <electron 路径> build/make-icon.cjs
- * 需要时用 `npm run icon`（见 package.json）。
+ * 跑法：`npm run icon`
+ * （内部要清掉 ELECTRON_RUN_AS_NODE，否则 Electron 退化成纯 Node 直接报错）
+ *
+ * ⚠️ 为什么是「多尺寸 + 经典 BMP 帧」而不是「单帧 PNG 压缩」：
+ * 之前只有一个 256 的 PNG 帧，rcedit 写进 exe 后 Windows 显示的还是 Electron 默认图标 ——
+ * PNG 压缩帧要 Vista 以上才认，且 rcedit / 部分资源工具处理不好。
+ * 桌面 48px、任务栏 32px、标题栏 16px 各取一帧才是 Windows 的常规做法。
  */
 const { app, BrowserWindow } = require('electron');
 const fs = require('node:fs');
 const path = require('node:path');
 
-const SIZE = 512;
+const MASTER = 512; // 主渲染尺寸，其余尺寸由它等比缩放
+const FRAMES = [16, 24, 32, 48, 64, 128, 256]; // ICO 内含的尺寸（256 是规范上限）
 
 app.disableHardwareAcceleration();
 
 app.whenReady().then(async () => {
   const svgPath = path.join(__dirname, '..', 'DD logo.svg');
   let svg = fs.readFileSync(svgPath, 'utf8');
-  // 浏览器不需要 XML 声明与 DOCTYPE
   svg = svg.replace(/<\?xml[^>]*\?>/g, '').replace(/<!DOCTYPE[^>]*>/g, '');
-  // 原来写的是 100%，在固定尺寸窗口里会按 viewBox 撑满，直接给定像素更稳
-  svg = svg.replace(/width="100%"/, `width="${SIZE}"`).replace(/height="100%"/, `height="${SIZE}"`);
+  svg = svg
+    .replace(/width="100%"/, `width="${MASTER}"`)
+    .replace(/height="100%"/, `height="${MASTER}"`);
 
   const html = `<!doctype html><html><head><meta charset="utf-8">
-<style>html,body{margin:0;padding:0;width:${SIZE}px;height:${SIZE}px;overflow:hidden}svg{display:block}</style>
+<style>html,body{margin:0;padding:0;width:${MASTER}px;height:${MASTER}px;overflow:hidden;background:transparent}svg{display:block}</style>
 </head><body>${svg}</body></html>`;
 
   const tmpHtml = path.join(__dirname, '..', '.tmp', 'icon-render.html');
@@ -33,56 +38,108 @@ app.whenReady().then(async () => {
   fs.writeFileSync(tmpHtml, html, 'utf8');
 
   const win = new BrowserWindow({
-    width: SIZE,
-    height: SIZE,
+    width: MASTER,
+    height: MASTER,
     show: false,
     frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
     webPreferences: { offscreen: false },
   });
 
   await win.loadFile(tmpHtml);
-  // 等一帧，确保 SVG 里的路径已经画完
-  await new Promise((r) => setTimeout(r, 700));
+  await new Promise((r) => setTimeout(r, 700)); // 等 SVG 画完
 
   const shot = await win.webContents.capturePage();
-  // 高 DPI 下 capturePage 会返回 1.25 倍尺寸，缩回目标边长
-  const big = shot.getSize().width === SIZE ? shot : shot.resize({ width: SIZE, height: SIZE, quality: 'best' });
+  const master =
+    shot.getSize().width === MASTER
+      ? shot
+      : shot.resize({ width: MASTER, height: MASTER, quality: 'best' });
+
   const outDir = path.join(__dirname, '..', 'build');
   fs.mkdirSync(outDir, { recursive: true });
 
-  fs.writeFileSync(path.join(outDir, 'icon.png'), big.toPNG());
+  fs.writeFileSync(path.join(outDir, 'icon.png'), master.toPNG());
 
-  /* 再出一份 256 和 .ico：
-     - ICO 的宽高字段各只有 1 字节（0 代表 256），所以 256 就是上限
-     - 本地打包时 electron-builder 走不了 rcedit（普通账户建不了符号链接），
-       需要自己用 rcedit 写图标，而 rcedit 只吃 .ico */
-  const small = big.resize({ width: 256, height: 256, quality: 'best' });
-  const smallPng = small.toPNG();
-  fs.writeFileSync(path.join(outDir, 'icon-256.png'), smallPng);
-  fs.writeFileSync(path.join(outDir, 'icon.ico'), pngToIco(smallPng));
+  // 逐尺寸缩放，每帧都存成经典 32bpp BMP
+  const frames = FRAMES.map((size) => ({
+    size,
+    bgra: master.resize({ width: size, height: size, quality: 'best' }).toBitmap(),
+  }));
 
-  const { width, height } = big.getSize();
-  console.log(`icon.png ${width}x${height} / icon-256.png 256x256 / icon.ico 已生成`);
-  if (width < 256) console.error('⚠️ 尺寸不足 256，electron-builder 会拒绝');
+  fs.writeFileSync(path.join(outDir, 'icon.ico'), buildIco(frames));
+  fs.writeFileSync(
+    path.join(outDir, 'icon-256.png'),
+    master.resize({ width: 256, height: 256, quality: 'best' }).toPNG(),
+  );
+
+  // 顺手留一张小尺寸预览，方便肉眼确认 32px 下还认不认得出
+  fs.writeFileSync(
+    path.join(outDir, 'icon-32-preview.png'),
+    master.resize({ width: 32, height: 32, quality: 'best' }).toPNG(),
+  );
+
+  const { width, height } = master.getSize();
+  console.log(
+    `icon.png ${width}x${height} / icon.ico (${FRAMES.join(', ')}) / icon-256.png / icon-32-preview.png`,
+  );
   app.exit(0);
 });
 
-/** 把 PNG 包成单帧 ICO（Vista 起支持 PNG 压缩的图标） */
-function pngToIco(png) {
+/**
+ * 组一个多帧 ICO。
+ * 每帧 = BITMAPINFOHEADER(40) + XOR 位图（BGRA，自下而上）+ AND 掩码（1bpp）。
+ * 32bpp 下透明度由 alpha 通道表达，AND 掩码全 0 即可。
+ */
+function buildIco(frames) {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0); // reserved
   header.writeUInt16LE(1, 2); // type = icon
-  header.writeUInt16LE(1, 4); // 帧数
+  header.writeUInt16LE(frames.length, 4);
 
-  const entry = Buffer.alloc(16);
-  entry.writeUInt8(0, 0);      // width  256（0 表示 256）
-  entry.writeUInt8(0, 1);      // height 256
-  entry.writeUInt8(0, 2);      // 调色板数
-  entry.writeUInt8(0, 3);      // reserved
-  entry.writeUInt16LE(1, 4);   // color planes
-  entry.writeUInt16LE(32, 6);  // 位深
-  entry.writeUInt32LE(png.length, 8);
-  entry.writeUInt32LE(22, 12); // 数据起点 = 6 + 16
+  const entries = [];
+  const blobs = [];
+  let offset = 6 + 16 * frames.length;
 
-  return Buffer.concat([header, entry, png]);
+  for (const { size, bgra } of frames) {
+    const xor = bgraToRows(bgra, size);
+    const andStride = Math.ceil(size / 32) * 4; // 1bpp，行按 4 字节对齐
+    const and = Buffer.alloc(andStride * size); // 全 0 = 全部不透明（真正的透明看 alpha）
+
+    const dib = Buffer.alloc(40);
+    dib.writeUInt32LE(40, 0); // biSize
+    dib.writeInt32LE(size, 4); // biWidth
+    dib.writeInt32LE(size * 2, 8); // biHeight = XOR + AND 两份
+    dib.writeUInt16LE(1, 12); // biPlanes
+    dib.writeUInt16LE(32, 14); // biBitCount
+    dib.writeUInt32LE(0, 16); // biCompression = BI_RGB
+    dib.writeUInt32LE(xor.length + and.length, 20); // biSizeImage
+
+    const entry = Buffer.alloc(16);
+    entry.writeUInt8(size >= 256 ? 0 : size, 0); // 256 在 1 字节里写 0
+    entry.writeUInt8(size >= 256 ? 0 : size, 1);
+    entry.writeUInt8(0, 2); // 调色板数
+    entry.writeUInt8(0, 3); // reserved
+    entry.writeUInt16LE(1, 4); // color planes
+    entry.writeUInt16LE(32, 6); // 位深
+    entry.writeUInt32LE(40 + xor.length + and.length, 8);
+    entry.writeUInt32LE(offset, 12);
+
+    entries.push(entry);
+    blobs.push(Buffer.concat([dib, xor, and]));
+    offset += 40 + xor.length + and.length;
+  }
+
+  return Buffer.concat([header, ...entries, ...blobs]);
+}
+
+/** nativeImage.toBitmap() 是自上而下的 BGRA，BMP 要求自下而上逐行 */
+function bgraToRows(bgra, size) {
+  const stride = size * 4;
+  const out = Buffer.alloc(stride * size);
+  for (let y = 0; y < size; y++) {
+    const src = (size - 1 - y) * stride;
+    bgra.copy(out, y * stride, src, src + stride);
+  }
+  return out;
 }

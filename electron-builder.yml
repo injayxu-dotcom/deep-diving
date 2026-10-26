@@ -35,8 +35,10 @@ asar: true
 electronDist: node_modules/.cache/dd-electron
 
 win:
-  # 由 build/make-icon.cjs 从 DD logo.svg 生成（640×640 PNG，builder 会自动转 ico）
-  icon: build/icon.png
+  # 由 build/make-icon.cjs 从 DD logo.svg 生成的多尺寸 ico（16/24/32/48/64/128/256）。
+  # 直接给 ico 而不是 png：builder 自己转出来的帧数不受控，而 16/24/32 这几个小尺寸
+  # 才是任务栏和标题栏实际取用的 —— 缺了它们 Windows 会拿 256 缩，糊。
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]
