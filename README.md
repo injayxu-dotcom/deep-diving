@@ -1,6 +1,7 @@
 # 创意深潜 Deep Diving
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/injayxu-dotcom/deep-diving?label=download)](https://github.com/injayxu-dotcom/deep-diving/releases/latest)
 
 > 在思维的海洋中下潜，打捞灵感珍珠。
 
