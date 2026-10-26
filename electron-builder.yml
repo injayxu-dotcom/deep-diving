@@ -15,6 +15,11 @@ directories:
   output: release
   buildResources: build
 
+# 不在打包阶段自动发布。CI 里 electron-builder 检测到运行环境后会默认尝试
+# 往 GitHub 传产物，没有 GH_TOKEN 时直接报「GitHub Personal Access Token is not set」
+# 把整个打包判失败。发布交给 release.yml 里的 gh release create。
+publish: null
+
 files:
   - electron-dist/**
   - dist/**
