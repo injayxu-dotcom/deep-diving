@@ -1,0 +1,56 @@
+# electron-builder 配置
+#
+# 体积是刻意抠过的，别随手加回这些：
+#   1. files 里排除 node_modules —— react / pdfjs / jszip 都已经由 Vite 打进 dist，
+#      asar 里再放一份等于白白多几十 MB。主进程零第三方依赖（只用 Node 内置）。
+#   2. 语言包只留 zh-CN / en-US —— Chromium 自带 50 多种，每份几百 KB 到几 MB。
+#      筛选在 electron/prepare-electron.mjs 的复制阶段完成（见下方 electronDist）。
+#   3. 不含 sourcemap（Vite 构建已关闭）。
+
+appId: cn.youyu.deepdiving
+productName: Deep Diving
+copyright: Copyright © 2026 youyu
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - electron-dist/**
+  - dist/**
+  - package.json
+  - "!node_modules/**"
+  - "!**/*.map"
+
+asar: true
+
+# 用精简过的运行时：语言包在复制阶段就被筛掉，产物里没有多余文件要删。
+# 同时它让打包完全离线 —— 否则 electron-builder 会去 GitHub 重新下一份 Electron，
+# 而 github.com 在国内经常不可达。由 `npm run desktop:prepare` 生成。
+electronDist: node_modules/.cache/dd-electron
+
+win:
+  # 由 build/make-icon.cjs 从 DD logo.svg 生成（640×640 PNG，builder 会自动转 ico）
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: DeepDiving-Setup-${version}.${ext}
+
+nsis:
+  # 不用一键安装：给用户选安装目录的机会，也便于装到非系统盘
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: 创意深潜
+  installerLanguages:
+    - zh_CN
+  language: "2052"
+  deleteAppDataOnUninstall: false
+
+portable:
+  artifactName: DeepDiving-Portable-${version}.${ext}

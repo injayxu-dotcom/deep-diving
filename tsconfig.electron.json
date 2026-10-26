@@ -1,0 +1,10 @@
+{
+  "// 说明": "主进程与本地转发是 Node 环境，跟 src 的 DOM 环境分开检查。tsc 默认只覆盖 src，这里补上另一半，否则 esbuild 只转译不报错，类型错误会静默潜伏。",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["electron", "server"]
+}

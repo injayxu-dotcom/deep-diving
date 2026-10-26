@@ -36,11 +36,13 @@ cp .env.example .env.local
 ## 目录结构
 
 ```
-src/
+src/           前端（浏览器环境）
   components/    界面组件（按阶段划分：Canvas / Clarify / Report）
   store/         状态管理，单 store（useStore.ts）
   lib/           纯逻辑：AI 调用、评分、提示词、导出、存储
   styles/        样式与设计令牌
+electron/      桌面外壳：主进程、preload、打包脚本（Node 环境）
+server/        AI 转发核心，dev 与桌面端共用同一份
 cloud/functions/ 可选的 CloudBase 云函数
 tools/           开发期脚本（截图、e2e），不参与构建
 docs/            部署维护说明与界面截图
@@ -48,6 +50,29 @@ docs/            部署维护说明与界面截图
 
 `src/lib/` 里是纯函数，改动时优先配合单测或自检脚本。
 `src/store/useStore.ts` 是唯一的状态源。改动核心逻辑前，先读 `src/lib/scoring.ts` 与 `src/lib/prompts.ts` 的注释——六维评分、反平庸机制的设计意图都写在那里，有些看起来奇怪的地方是刻意的。
+
+### 两套运行环境，分开检查
+
+前端跑在浏览器里，主进程跑在 Node 里，所以有两个 tsconfig：
+
+```bash
+npm run typecheck        # src/，DOM 环境
+npm run typecheck:node   # electron/ + server/，Node 环境
+npm run check            # 两个都跑（CI 用的就是这条）
+```
+
+主进程那套**必须单独检查**：esbuild 只转译不报类型错，漏检的话错误会静默潜伏到运行时。
+
+### 桌面端开发
+
+```bash
+npm run desktop:dev      # 热更新：同时起 Vite 和窗口
+npm run desktop          # 跑构建产物（更接近用户实际看到的样子）
+```
+
+`desktop:dev` 用独立的数据目录（`deep-diving-dev`），不会碰正式使用时的项目数据。
+
+关于环境变量 `ELECTRON_RUN_AS_NODE`：某些 AI / 脚手架终端会预设它，让 Electron 退化成纯 Node。带着它启动时 `require('electron')` 返回的是可执行文件路径而不是 API，主进程会以「Cannot read properties of undefined (reading 'isPackaged')」这种完全指不到原因的错崩掉。仓库里的 `electron/launch.mjs` 已经显式摘掉它，但如果你在别处直接敲 `electron .`，记得先清掉。
 
 ---
 

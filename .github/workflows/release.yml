@@ -1,0 +1,58 @@
+name: Release
+
+# 推一个 v* tag 就会自动构建安装包并发布到 Releases。
+# 普通用户从此不需要装 Node —— 直接去 Releases 下载 exe 双击安装。
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: 构建 Windows 安装包
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 类型检查
+        run: npm run check
+
+      - name: 打包
+        run: npm run desktop:dist
+        env:
+          # 没有代码签名证书，别让 builder 去自动找
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+
+      # 没打 tag（手动触发）时也能把产物下下来看一眼
+      - name: 上传产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installers
+          path: |
+            release/DeepDiving-Setup-*.exe
+            release/DeepDiving-Portable-*.exe
+          if-no-files-found: error
+
+      - name: 发布到 Releases
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            release/DeepDiving-Setup-*.exe \
+            release/DeepDiving-Portable-*.exe \
+            --generate-notes \
+            --title "Deep Diving $GITHUB_REF_NAME"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

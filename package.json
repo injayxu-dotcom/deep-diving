@@ -8,12 +8,22 @@
   "engines": {
     "node": ">=18.18"
   },
+  "main": "electron-dist/main.cjs",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "build:cloud": "tsc --noEmit && vite build --mode cloud",
+    "build:desktop": "tsc --noEmit && vite build --mode desktop",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "typecheck:node": "tsc -p tsconfig.electron.json",
+    "check": "npm run typecheck && npm run typecheck:node",
+    "desktop": "npm run build:desktop && node electron/build.mjs && node electron/launch.mjs",
+    "desktop:dev": "node electron/build.mjs && node electron/dev.mjs",
+    "desktop:prepare": "node electron/build.mjs && node electron/prepare-electron.mjs",
+    "desktop:dist": "npm run build:desktop && npm run desktop:prepare && electron-builder",
+    "desktop:dir": "npm run build:desktop && npm run desktop:prepare && electron-builder --dir",
+    "icon": "node electron/make-icon.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.3.5",
@@ -24,9 +34,12 @@
     "zustand": "^5.0.1"
   },
   "devDependencies": {
+    "@types/node": "^20.19.43",
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.3",
+    "electron": "^33.4.11",
+    "electron-builder": "^25.1.8",
     "playwright": "^1.62.1",
     "typescript": "^5.6.3",
     "vite": "^5.4.11"

@@ -3,6 +3,11 @@ dist/
 dist-ssr/
 *.local
 
+# 桌面端构建产物
+electron-dist/
+release/
+build/_icon.html
+
 # 本地私有配置（含云环境地址等，绝不提交）
 .env.local
 .env.*.local

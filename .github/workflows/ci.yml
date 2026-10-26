@@ -21,8 +21,17 @@ jobs:
       - name: Install
         run: npm ci
 
+      # 前端（src）与主进程（electron + server）是两套运行环境，分别检查。
+      # 主进程那套如果漏检，esbuild 只转译不报错，类型错误会静默潜伏。
       - name: Typecheck
-        run: npm run typecheck
+        run: npm run check
 
       - name: Build
         run: npm run build
+
+      # 桌面产物也要能构建，否则合并进来才发现打包挂了
+      - name: Build desktop bundle
+        run: npm run build:desktop
+
+      - name: Build main process
+        run: node electron/build.mjs

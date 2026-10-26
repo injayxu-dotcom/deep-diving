@@ -180,8 +180,20 @@ async function readSSE(
   return full;
 }
 
-/** 本地 dev 的 Vite 代理中间件（只在 npm run dev 时存在） */
-const LOCAL_PROXY = '/api/ai/chat';
+/**
+ * 桌面运行时信息（由 Electron preload 在文档开始阶段注入）。
+ * 浏览器里是 undefined，所有分支都退化为原来的网页行为。
+ */
+const DESKTOP = typeof window !== 'undefined' ? window.deepDiving : undefined;
+const IS_DESKTOP = !!DESKTOP?.isDesktop;
+
+/**
+ * 本地转发端点。
+ * - `npm run dev`：Vite 中间件，相对路径即可
+ * - 桌面版：主进程在 127.0.0.1 起的端口 + 随机令牌（都写在注入的 URL 里）
+ * - 已部署的静态站点：没有本地端点，走下面的直连分支
+ */
+const LOCAL_PROXY = DESKTOP?.aiProxyUrl || '/api/ai/chat';
 
 /**
  * 生产构建（已部署的静态站点）里，浏览器直连 LLM。
@@ -502,10 +514,12 @@ export function classifyDirectFailure(err: string, s?: AppSettings): { kind: Fai
   return { kind: 'unknown', tip: '' };
 }
 
-/** 不带守卫的一次调用尝试：dev 走本地代理；生产直连失败自动回落云端代理 */
+/** 不带守卫的一次调用尝试：dev 与桌面版走本地转发；纯静态生产直连失败后回落云端代理 */
 async function chatAttempt(opts: InternalOptions): Promise<string> {
-  // 开发模式：npm run dev 有 Vite 代理中间件，Key 不落浏览器网络面板之外
-  if (!import.meta.env.PROD) {
+  // dev：Vite 代理中间件；桌面版：Electron 主进程的转发口。
+  // 桌面版必须走这条路 —— file:// 下的相对路径解析不到，直连又会被厂商 CORS 拦，
+  // 而且 Key 走主进程就不会出现在渲染进程的网络面板里。
+  if (IS_DESKTOP || !import.meta.env.PROD) {
     return chatViaProxy(LOCAL_PROXY, opts);
   }
 

@@ -22,11 +22,32 @@ AI 驱动的视觉设计师认知工作台。无限画布 + 真实 LLM 接口，
 
 六维评分模型怎么来的、反平庸机制为什么这么设计、以及为什么评分不用 Embedding——这些推导写在对应源码的注释里（`src/lib/scoring.ts`、`src/lib/prompts.ts`），改之前值得先读。
 
-## 快速开始
+## 下载安装（普通用户看这里）
+
+去 [Releases](https://github.com/injayxu-dotcom/deep-diving/releases) 下载，**不需要装 Node、不需要命令行**：
+
+| 文件 | 适用 | 说明 |
+| :--- | :--- | :--- |
+| `DeepDiving-Setup-x.y.z.exe` | Windows | 安装版。双击安装，可以选安装目录，自动建桌面与开始菜单快捷方式 |
+| `DeepDiving-Portable-x.y.z.exe` | Windows | 免安装版。单个 exe，双击即用，不写注册表、不需要管理员权限 |
+
+装完是一个独立窗口，不是浏览器标签页。数据存在本机，卸载时默认保留（重装后项目还在）。
+
+首次打开会引导你填一个 AI Key——点右上角 **AI 设置**，选服务商（DeepSeek / 通义 / Kimi / 智谱 / 本地 Ollama）粘贴 Key 即可，其余字段已预置。
+
+## 从源码运行（开发者看这里）
+
+### 桌面应用
 
 ```bash
-git clone https://github.com/injayxu-dotcom/deep-diving.git
-cd deep-diving
+npm install
+npm run desktop        # 构建后直接开窗口
+npm run desktop:dev    # 改代码热更新（同时起 Vite 和窗口）
+```
+
+### 网页版
+
+```bash
 npm install
 npm run dev
 ```
@@ -62,6 +83,26 @@ npm run dev
 > 接本地 Ollama / LM Studio：`DD_ALLOW_LOCALHOST=1 npm run dev`
 
 生产构建（`npm run build`）只产出静态文件，不含这个代理。要上线的话需要自己补一个后端。
+
+## 桌面端是怎么做的
+
+Electron 外壳 + 同一套前端产物。三处和网页版不同：
+
+1. **AI 转发搬到了主进程**。打包后没有 Vite dev server，前端会退化成浏览器直连（被厂商 CORS 拦）。现在主进程在 `127.0.0.1` 的随机端口起一个转发服务，和 dev 用的是**同一份实现**（`server/aiProxyCore.ts`），服务商白名单与 SSRF 收敛一行没改——两处各写一遍的话，这类规则迟早漂移，而且漂移不会报错。
+2. **转发口带随机令牌**。本机的任何进程都能连 `127.0.0.1` 的任意端口，不加令牌就等于开了一个公开的免费 AI 网关，还能被当成探测内网的跳板。令牌只存在于 preload 注入的地址里。
+3. **数据目录按模式分开**。`desktop:dev` 用独立目录，调试时随手建的项目、改的 Key 不会写进正式数据。
+
+### 自己打包
+
+```bash
+npm run desktop:dist    # Windows 安装版 + 免安装版，落在 release/
+npm run desktop:dir     # 只出解包目录，调试用
+npm run icon            # 改了 DD logo.svg 后重新生成 build/icon.png
+```
+
+产物约 72MB，其中 `app.asar` 只有 2.5MB —— react / pdfjs / jszip 已经由 Vite 打进 `dist`，运行时里不重复放一份，语言包也只留中英两份。
+
+> 打包卡在 `winCodeSign` 解压失败（报"无法创建符号链接"）时：Windows 普通账户没有建符号链接的权限。开一次**开发者模式**（设置 → 系统 → 开发者选项），或改用 GitHub Actions 打包（CI 自带权限）。本地应急可以对单次命令加 `-c.win.signAndEditExecutable=false`，代价是 exe 用默认图标。
 
 ## 操作方式
 
@@ -124,9 +165,19 @@ src/
 │   ├── ConfirmDialog.tsx     应用内确认弹窗（替代被 iframe 拦截的 confirm）
 │   └── SettingsModal.tsx     AI 接口配置与连接测试
 └── App.tsx                   无限画布装配
-server/viteAiProxy.ts         本地 AI 代理中间件
+server/
+├── aiProxyCore.ts            AI 转发核心：白名单、SSRF 收敛、SSE 透传（dev 与桌面端共用）
+└── viteAiProxy.ts            把 core 挂到 Vite dev server 上
+electron/
+├── main.ts                   主进程：原生窗口 + 本地转发服务 + 单实例锁
+├── preload.ts                只往页面注入一个地址和一个版本号（contextIsolation 开着）
+├── build.mjs                 用 esbuild 打主进程（产物 .cjs，因为包是 type: module）
+├── dev.mjs                   一条命令同时起 Vite 与窗口
+├── prepare-electron.mjs      复制精简运行时（筛掉用不上的语言包）
+└── make-icon.cjs             用 Electron 渲染 DD logo.svg → build/icon.png
 tools/                        mock AI 服务、端到端测试、截图脚本
 docs/                         部署维护说明、界面截图
+build/icon.png                应用图标（源文件是 DD logo.svg）
 ```
 
 ## 与最初设计的偏差（都是刻意的）

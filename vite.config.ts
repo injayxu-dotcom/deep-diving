@@ -15,7 +15,13 @@ import { aiProxy } from './server/viteAiProxy';
  * `--mode cloud` 是纯字符串，不经过路径判断，从源头上没有这个坑。
  */
 export default defineConfig(({ mode }) => ({
-  base: mode === 'cloud' ? '/deepdiving/' : '/',
+  /**
+   * base 三种取值：
+   *   cloud    → '/deepdiving/'  子路径部署
+   *   desktop  → './'            桌面版用 file:// 加载，绝对路径会全部 404
+   *   其它     → '/'             dev 与普通静态部署
+   */
+  base: mode === 'cloud' ? '/deepdiving/' : mode === 'desktop' ? './' : '/',
   plugins: [react(), aiProxy()],
   server: {
     host: '127.0.0.1',
