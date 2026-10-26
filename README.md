@@ -7,9 +7,9 @@
 
 AI 驱动的视觉设计师认知工作台。无限画布 + 真实 LLM 接口，覆盖「调研 → 发散 → 收敛 → 转译」全链路。
 
-![首屏：先配好 AI 接口，再选两条起步路径](docs/screenshots/01-welcome.png)
+![首屏：先配好 AI 接口，再选两条起步路径](docs/screenshots/01-welcome.png?v=2)
 
-![画布：情报卡片、种子词与评分面板](docs/screenshots/02-canvas.png)
+![画布：情报卡片、种子词与评分面板](docs/screenshots/02-canvas.png?v=2)
 
 ## 它做什么
 
@@ -61,7 +61,7 @@ npm run dev
 
 默认指向 Agnes（免费）。只要是 **OpenAI 兼容协议** 都能用（DeepSeek / 千问 / Kimi / 智谱 / 本地 Ollama 等）。
 
-![配置 AI 接口：四个常用渠道一键填入，旁边就写着去哪申请 Key](docs/screenshots/03-ai-setup.png)
+![配置 AI 接口：四个常用渠道一键填入，旁边就写着去哪申请 Key](docs/screenshots/03-ai-setup.png?v=1)
 
 | 字段 | 示例 |
 | :--- | :--- |
