@@ -3,7 +3,7 @@ import { useStore, MAX_CLARIFY_ROUNDS } from '../store/useStore';
 import { KIND_LABEL } from '../lib/files';
 import type { ClarifyQuestion } from '../types';
 import ddLogo from '../assets/DD-logo.svg';
-import { SettingsModal } from './SettingsModal';
+import { Icon } from './Icon';
 
 /**
  * F10 Stage 1：苏格拉底式需求澄清对话（PRD 10.2 / 10.2b）。
@@ -31,7 +31,7 @@ export function ClarifyStage() {
 
   // 全部在下方「输入回答」或点击选项时发送，与 busy 状态联动防连点
   const [value, setValue] = useState('');
-  const [showSettings, setShowSettings] = useState(false);
+  const openSettings = useStore((s) => s.openSettings);
   const endRef = useRef<HTMLDivElement>(null);
 
   /**
@@ -135,7 +135,7 @@ export function ClarifyStage() {
 
         <div className="stage-top-acts">
           {!apiKey ? (
-            <button className="btn aqua sm" onClick={() => setShowSettings(true)}>
+            <button className="btn aqua sm" onClick={openSettings}>
               配置 API Key
             </button>
           ) : null}
@@ -153,7 +153,7 @@ export function ClarifyStage() {
             defaultSubject={product}
             busy={busy}
             hasKey={!!apiKey}
-            onConfig={() => setShowSettings(true)}
+            onConfig={openSettings}
             onStart={(subject) => void beginClarify(subject)}
             onSkip={skipClarify}
           />
@@ -260,8 +260,6 @@ export function ClarifyStage() {
           </>
         ) : null}
       </footer>
-
-      {showSettings ? <SettingsModal onClose={() => setShowSettings(false)} /> : null}
 
       {closingAsk ? (
         <FinishCheck
@@ -425,12 +423,28 @@ function Intro({
         两条路，选一条顺手。拿不准就先让 AI 问几句——它像甲方一样追问，把真实需求挖出来。
       </p>
       {!hasKey ? (
-        <p className="cl-intro-key">
-          澄清由 AI 驱动，需要先配置模型接口
-          <button className="btn aqua xs" style={{ marginLeft: 8 }} onClick={onConfig}>
-            配置 API Key
+        /* 原来这里是一行黄色提示条（「澄清由 AI 驱动，需要先配置模型接口 + 小按钮」），
+           实测新用户会直接看下一行入口卡、根本不读它 —— 于是停在首屏不知道从哪开始。
+           这是新用户第一个必须完成的动作，值得占一块正式的位置。 */
+        <div className="cl-keycard">
+          <span className="cl-keycard-ico" aria-hidden="true">
+            <Icon name="key" />
+          </span>
+          <div className="cl-keycard-main">
+            <b>先配一个 AI 接口，再开始深潜</b>
+            <span>深潜全程由 AI 驱动。没配也能浏览界面，但走不完流程。</span>
+            <span className="cl-keycard-hint">
+              没有 Key？Agnes 长期免费，邮箱注册 30 秒即可拿到
+              <a href="https://platform.agnes-ai.com" target="_blank" rel="noreferrer">
+                去申请
+                <Icon name="link" />
+              </a>
+            </span>
+          </div>
+          <button className="btn pri sm" onClick={onConfig}>
+            配置
           </button>
-        </p>
+        </div>
       ) : null}
 
       <div className="cl-entries">

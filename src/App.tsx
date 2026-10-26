@@ -578,7 +578,11 @@ function usePanels() {
 }
 
 function Shell() {
-  const [showSettings, setShowSettings] = useState(false);
+  /* 设置弹窗的状态在 store 里：引导结尾、首屏配置卡、顶栏、状态栏四处都能开它，
+     如果各自 useState，连点两下就会叠出两个一模一样的弹窗。 */
+  const settingsOpen = useStore((s) => s.settingsOpen);
+  const openSettings = useStore((s) => s.openSettings);
+  const closeSettings = useStore((s) => s.closeSettings);
   const [showHelp, setShowHelp] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [showProjects, setShowProjects] = useState(false);
@@ -779,7 +783,7 @@ function Shell() {
           <button
             className="btn pri sm"
             title={apiKey ? 'AI 设置' : '还没配 AI 接口 —— 配好才能开始深潜'}
-            onClick={() => setShowSettings(true)}
+            onClick={openSettings}
             data-act="settings"
           >
             <Icon name={apiKey ? 'settings' : 'key'} /> {apiKey ? 'AI 设置' : '配置 API Key'}
@@ -830,11 +834,10 @@ function Shell() {
 
       {/* 底部状态栏：流内 footer（30px），横跨三栏。
           只在画布阶段出现 —— 澄清 / 简报是两个整页，没有"画布当前状态"可言。 */}
-      <StatusBar sync={sync} onOpenSettings={() => setShowSettings(true)} />
+      <StatusBar sync={sync} onOpenSettings={openSettings} />
 
       {reportOpen ? <ReportDrawer onClose={() => setReportOpen(false)} /> : null}
       {docOpen ? <DocModal onClose={() => setDocOpen(false)} /> : null}
-      {showSettings ? <SettingsModal onClose={() => setShowSettings(false)} /> : null}
 
       {confirmClear ? (
         <ConfirmDialog
@@ -863,6 +866,9 @@ function Shell() {
       <ToastHost />
       <DeleteDialog />
       <GuideModal />
+      {/* 设置弹窗必须在全局层：澄清首屏的配置卡、引导结尾、「配置 API Key」按钮
+          都会打开它，而那些时刻 stage 不是 canvas —— 放在画布分支里等于点不开。 */}
+      {settingsOpen ? <SettingsModal onClose={closeSettings} /> : null}
       <RediveDialog />
       <SnapshotModal />
       {showProjects ? <ProjectLibrary onClose={() => setShowProjects(false)} /> : null}

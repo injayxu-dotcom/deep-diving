@@ -3,13 +3,20 @@ import { useStore } from '../store/useStore';
 import { chat } from '../lib/ai';
 import { describeError } from '../lib/cloudApi';
 
-/** 常用服务商一键填入，省得手抄 Base URL 写错（少个 /v1 就会 404） */
+/**
+ * 常用服务商一键填入，省得手抄 Base URL 写错（少个 /v1 就会 404）。
+ *
+ * Agnes 排第一不是随手定的：它承诺长期免费、注册不绑银行卡、不验手机号，
+ * 是「一个 Key 都没有」的人最短的一条路。有 Key 的人自然会跳过它选自己惯用的。
+ */
 const PROVIDERS = [
-  { name: 'DeepSeek', base: 'https://api.deepseek.com', model: 'deepseek-chat' },
-  { name: 'AIhubmix 免费档', base: 'https://aihubmix.com/v1', model: 'minimax-m3-free' },
-  { name: '智谱', base: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
   { name: 'Agnes 免费', base: 'https://apihub.agnes-ai.com/v1', model: 'agnes-2.5-flash' },
+  { name: 'DeepSeek', base: 'https://api.deepseek.com', model: 'deepseek-chat' },
+  { name: '千问', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  { name: '智谱', base: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
 ] as const;
+
+const AGNES_SIGNUP = 'https://platform.agnes-ai.com';
 
 /**
  * AIhubmix 的免费模型精选（完整名单 2026-09 共 56 个，见 aihubmix.com/models/free）。
@@ -51,23 +58,31 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
 
   const isAihubmix = /aihubmix/i.test(settings.baseUrl);
   const isAgnes = /agnes/i.test(settings.baseUrl);
+  const hasKey = !!settings.apiKey.trim();
 
   return (
     <div className="modal-mask" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-h">
-          <span>AI 接口设置</span>
+          <span>{hasKey ? 'AI 接口设置' : '配置 AI 接口'}</span>
           <button className="icon-btn" onClick={onClose} aria-label="关闭">
             &times;
           </button>
         </div>
 
         <div className="modal-b">
+          {!hasKey ? (
+            <p className="phint" style={{ margin: '0 0 14px' }}>
+              深潜全程由 AI 驱动，需要一个能调模型的 API Key。四家任选其一，
+              建议直接用下面第一个（免费、不用绑卡）。
+            </p>
+          ) : null}
+
           <label className="plabel">服务商 Base URL</label>
           <input
             className="pinput"
             value={settings.baseUrl}
-            placeholder="https://api.deepseek.com"
+            placeholder="https://apihub.agnes-ai.com/v1"
             onChange={(e) => setSettings({ baseUrl: e.target.value })}
           />
           <p className="phint">兼容 OpenAI 协议。DeepSeek / 智谱 / Kimi / 通义都行。</p>
@@ -78,13 +93,23 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             {PROVIDERS.map((p) => (
               <button
                 key={p.name}
-                className="btn ghost sm"
+                className={settings.baseUrl === p.base ? 'btn sm' : 'btn ghost sm'}
                 onClick={() => setSettings({ baseUrl: p.base, model: p.model })}
               >
                 {p.name}
               </button>
             ))}
           </div>
+
+          {/* 快捷按钮只解决「填什么」，不解决「去哪拿」——
+              而「一个 Key 都没有」才是新用户的真实状态。 */}
+          <p className="phint" style={{ margin: '8px 0 0' }}>
+            还没有 Key？Agnes 承诺长期免费，去{' '}
+            <a href={AGNES_SIGNUP} target="_blank" rel="noreferrer">
+              platform.agnes-ai.com
+            </a>{' '}
+            用邮箱注册（30 秒，不用绑卡），在「设置 → API 密钥」创建后复制粘贴到下面。
+          </p>
 
           <label className="plabel" style={{ marginTop: 14 }}>
             API Key
@@ -104,7 +129,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
               <input
                 className="pinput"
                 value={settings.model}
-                placeholder="deepseek-chat"
+                placeholder="agnes-2.5-flash"
                 onChange={(e) => setSettings({ model: e.target.value })}
               />
             </div>

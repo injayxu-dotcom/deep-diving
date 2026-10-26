@@ -2424,11 +2424,34 @@ span.nav-stage, span.nav-stage:disabled { opacity: 1; cursor: default; }
 .cl-intro-mark img { display: block; width: 100%; height: 100%; }
 .cl-intro-t { margin: 0 0 8px; font-size: var(--fs-d1); font-weight: 700; color: var(--ink-800); letter-spacing: -0.01em; }
 .cl-intro-s { margin: 0 auto 18px; font-size: var(--fs-lg); color: var(--text-2); line-height: 1.8; max-width: 520px; }
-.cl-intro-key {
-  font-size: var(--fs-md); color: var(--warn-text); background: var(--warn-bg);
-  border-radius: var(--r-sm); padding: 8px 12px; margin: 0 auto 14px;
-  max-width: 430px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap;
+/* ---- 首屏「还没配 AI 接口」引导卡 ----
+   原来是这一行黄色小字 + 小按钮，实测新用户会直接略过它去看下面的入口卡，
+   结果停在首屏不知道从哪开始。这是新用户第一个必须完成的动作，值得占正式位置。
+   配色用 warn 系而不是品牌陶土：它是「还没准备好」的状态，不是行动号召；
+   真正的行动按钮在卡片右侧，才用主色。 */
+.cl-keycard {
+  display: flex; align-items: flex-start; gap: 12px;
+  max-width: 560px; margin: 0 auto 18px; padding: 13px 16px;
+  background: var(--warn-bg); border-radius: var(--r-md); text-align: left;
 }
+.cl-keycard-ico {
+  flex-shrink: 0; width: 30px; height: 30px; border-radius: var(--r-full);
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, 0.55); color: var(--warn-text);
+}
+.cl-keycard-ico svg { width: 16px; height: 16px; }
+.cl-keycard-main { display: flex; flex-direction: column; gap: 3px; flex: 1; min-width: 0; }
+.cl-keycard-main b { font-size: var(--fs-lg); font-weight: 600; color: var(--ink-900); }
+.cl-keycard-main > span { font-size: var(--fs-md); line-height: 1.6; color: var(--ink-600); }
+.cl-keycard-hint { display: inline-flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.cl-keycard-hint a {
+  display: inline-flex; align-items: center; gap: 3px;
+  color: var(--aqua-600); font-weight: 600; text-decoration: none;
+}
+.cl-keycard-hint a:hover { text-decoration: underline; }
+.cl-keycard-hint a svg { width: 12px; height: 12px; }
+.cl-keycard > .btn { flex-shrink: 0; align-self: center; }
+
 .cl-intro-form { display: flex; gap: 8px; }
 .cl-intro-form .pinput { flex: 1; min-width: 0; }
 .cl-intro-alt { margin-top: 14px; }

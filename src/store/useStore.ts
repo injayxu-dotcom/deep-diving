@@ -256,6 +256,14 @@ interface State {
   pendingDelete: PendingDelete | null;
   /** 首次引导弹窗 */
   guideOpen: boolean;
+  /**
+   * AI 设置弹窗。
+   *
+   * 提到 store 是因为有四个入口要打开它：顶栏按钮 / 首屏配置卡 / 引导结尾 /
+   * 状态栏同步提示。各自 useState 的话，两次触发就会叠出两个一模一样的弹窗 ——
+   * 这种 bug 在截图里看不出来，只有真点两下才会发现。
+   */
+  settingsOpen: boolean;
   /** F8：当前选中的节点 id（框选 / Shift 多选）。驱动右下角批量操作条 */
   selection: string[];
   /** F8：组合收敛进行中（两个 AI 调用串联，需要禁用按钮防连点） */
@@ -308,6 +316,9 @@ interface State {
   openGuide(): void;
   /** remember=true 时写入「以后不再弹出」，后续不再自动唤起 */
   closeGuide(remember: boolean): void;
+
+  openSettings(): void;
+  closeSettings(): void;
 
   /* ---------- F10 流程 ---------- */
   /** 输入主题并开始澄清（清空旧对话，AI 问第一轮） */
@@ -1104,6 +1115,7 @@ export const useStore = create<State>((rawSet, get) => {
     toast: null,
     pendingDelete: null,
     guideOpen: false,
+    settingsOpen: false,
     selection: [],
     converging: false,
     // 老用户（有 report / 有节点 / 只填了项目名）直接进画布，不打断（PRD 10.4）；
@@ -1138,6 +1150,9 @@ export const useStore = create<State>((rawSet, get) => {
       }
       set({ guideOpen: false });
     },
+
+    openSettings() { set({ settingsOpen: true }); },
+    closeSettings() { set({ settingsOpen: false }); },
 
     setBrief(v) { set({ brief: v }); },
     setProduct(v) { set({ product: v }); },

@@ -33,7 +33,9 @@ AI 驱动的视觉设计师认知工作台。无限画布 + 真实 LLM 接口，
 
 装完是一个独立窗口，不是浏览器标签页。数据存在本机，卸载时默认保留（重装后项目还在）。
 
-首次打开会引导你填一个 AI Key——点右上角 **AI 设置**，选服务商（DeepSeek / 通义 / Kimi / 智谱 / 本地 Ollama）粘贴 Key 即可，其余字段已预置。
+首次打开会先介绍产品，看完点「去配置 AI 接口」就直接进配置页：默认已经选好 **Agnes**（承诺长期免费、注册不用绑卡），你只要去 [platform.agnes-ai.com](https://platform.agnes-ai.com) 用邮箱注册、创建密钥、粘贴回来即可。
+
+已配置过的人不会再看到这一步；想换服务商，点右上角 **AI 设置**，四个常用渠道一键填入（Agnes / DeepSeek / 千问 / 智谱），也可以手填任意 OpenAI 兼容地址。
 
 ## 从源码运行（开发者看这里）
 
@@ -56,13 +58,13 @@ npm run dev
 
 ### 配置 AI 接口
 
-默认 DeepSeek，但只要是 **OpenAI 兼容协议** 都能用（通义 / Kimi / 智谱 / OpenAI / 本地 Ollama 等）：
+默认指向 Agnes（免费）。只要是 **OpenAI 兼容协议** 都能用（DeepSeek / 千问 / Kimi / 智谱 / 本地 Ollama 等）：
 
 | 字段 | 示例 |
 | :--- | :--- |
-| Base URL | `https://api.deepseek.com` |
+| Base URL | `https://apihub.agnes-ai.com/v1` |
 | API Key | `sk-...` |
-| 模型 | `deepseek-chat` |
+| 模型 | `agnes-2.5-flash` |
 | 温度 | 0.9（创意发散建议偏高） |
 
 填完点 **测试连接** 验证。Key 存在本机 localStorage，只发给本地代理。

@@ -619,10 +619,16 @@ export interface AppSettings {
  */
 export const DEFAULT_API_BASE = (import.meta.env.VITE_API_BASE as string) || '';
 
+/**
+ * 默认接口用 Agnes 而不是 DeepSeek：一个刚下载应用的人手上通常一个 Key 都没有，
+ * 给他一个「要先充值才能用」的默认值，等于把第一步变成了一道收费门槛。
+ * Agnes 承诺长期免费、注册不绑卡，默认指向它，用户只需要粘一个 Key 进来。
+ * （已配置过的用户不会被这个默认值影响 —— settings 存在本机，读取时整份覆盖。）
+ */
 export const DEFAULT_SETTINGS: AppSettings = {
-  baseUrl: 'https://api.deepseek.com',
+  baseUrl: 'https://apihub.agnes-ai.com/v1',
   apiKey: '',
-  model: 'deepseek-chat',
+  model: 'agnes-2.5-flash',
   temperature: 0.9,
   apiBase: DEFAULT_API_BASE,
   cloudToken: '',

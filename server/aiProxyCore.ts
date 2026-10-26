@@ -191,7 +191,7 @@ export async function handleAiProxy(
 
   let url: string;
   try {
-    url = normalizeUrl(payload.baseUrl || 'https://api.deepseek.com', {
+    url = normalizeUrl(payload.baseUrl || 'https://apihub.agnes-ai.com/v1', {
       allowLocalhost: opts.allowLocalhost,
     });
   } catch (e) {
@@ -203,7 +203,7 @@ export async function handleAiProxy(
   // 有的只接受默认 temperature。先按通用写法发，遇到参数类 400 就换写法重试。
   // 深潜要一次吐出简报 + 情报卡 + 种子词，默认 4096 会截断 JSON，所以默认 8192。
   const baseBody: Record<string, unknown> = {
-    model: payload.model || 'deepseek-chat',
+    model: payload.model || 'agnes-2.5-flash',
     messages: payload.messages,
     stream: true,
   };

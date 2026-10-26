@@ -17,6 +17,8 @@ const TITLES = ['这是什么', '怎么用', '几个提示'];
 export function GuideModal() {
   const open = useStore((s) => s.guideOpen);
   const closeGuide = useStore((s) => s.closeGuide);
+  const apiKey = useStore((s) => s.settings.apiKey);
+  const openSettings = useStore((s) => s.openSettings);
   const [step, setStep] = useState(0);
   const [never, setNever] = useState(false);
 
@@ -87,8 +89,16 @@ export function GuideModal() {
               </button>
             ) : null}
             {last ? (
-              <button className="btn pri" onClick={() => closeGuide(never)}>
-                开始使用
+              /* 没配 Key 时不要放人进空转的首屏：引导结束时正是「接下来该干什么」
+                 最清楚的时刻，直接把这步做掉。配过了就还是原来的「开始使用」。 */
+              <button
+                className="btn pri"
+                onClick={() => {
+                  closeGuide(never);
+                  if (!apiKey.trim()) openSettings();
+                }}
+              >
+                {apiKey.trim() ? '开始使用' : '去配置 AI 接口'}
               </button>
             ) : (
               <button className="btn pri" onClick={() => setStep(step + 1)}>
@@ -153,6 +163,10 @@ function ScreenTips({ never, onToggle }: { never: boolean; onToggle: (v: boolean
   return (
     <>
       <ul className="guide-tips">
+        <li>
+          <b>要先去拿一个 AI Key</b>：深潜全程由 AI 驱动。点「去配置 AI 接口」，
+          Agnes 承诺长期免费，邮箱注册 30 秒就能拿到，不用绑卡。
+        </li>
         <li>在空白处拖一下框住几个词，或者 Shift+点击 逐个加选，就能一起组合收敛</li>
         <li>拖动种子词时，它的联想词会一起走，不用担心画布变乱</li>
         <li>上传的参考资料会作为 AI 的上下文：PDF / PPTX 提取文字和图，Markdown 原文直读，图片交给多模态模型</li>
