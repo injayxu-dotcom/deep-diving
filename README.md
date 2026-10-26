@@ -59,7 +59,9 @@ npm run dev
 
 ### 配置 AI 接口
 
-默认指向 Agnes（免费）。只要是 **OpenAI 兼容协议** 都能用（DeepSeek / 千问 / Kimi / 智谱 / 本地 Ollama 等）。
+默认指向 Agnes（免费）。只要是 **OpenAI 兼容协议** 都能用：官方 API、第三方供应商、各类中转站、自建 OneAPI / NewAPI、本地 Ollama，填它的 `/v1` 地址即可，不需要改代码或设任何环境变量。
+
+四个快捷填入只是「常用示例」，不是可选范围——地址栏填什么就连什么。
 
 ![配置 AI 接口：四个常用渠道一键填入，旁边就写着去哪申请 Key](docs/screenshots/03-ai-setup.png?v=1)
 
@@ -228,11 +230,14 @@ node tools/e2e.mjs
 
 **本地 dev 代理**（`server/viteAiProxy.ts`）
 
-- 默认拒绝内网 / 回环地址，只放行内置的服务商域名白名单
-- 接列表外的服务商：`DD_ALLOWED_HOSTS=your.host.com npm run dev`
-- 接本地模型（Ollama / LM Studio）：`DD_ALLOW_LOCALHOST=1 npm run dev`
+- 内网 / 保留地址**一律拒绝**（含云元数据 `169.254.169.254`），这条不给开关
+- 回环地址默认拒绝，本地模型需显式放行：`DD_ALLOW_LOCALHOST=1 npm run dev`
+- 其余公网地址不限：中转站、自建网关、任意兼容端点直接可用
+  （不再维护域名白名单——枚举不完，且桌面版用户没有终端可以设环境变量）
 
 **云端云函数**（`cloud/functions/api/index.js`）
+
+⚠️ 这一侧仍保留域名白名单：它跑在公网服务器上，被刷的成本由部署者承担，和本机代理不是同一个威胁模型。要让云端也支持中转站，用下面的 `LLM_ALLOWED_HOSTS` 逐条加。
 
 | 环境变量 | 作用 |
 | :--- | :--- |

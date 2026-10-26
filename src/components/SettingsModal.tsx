@@ -85,7 +85,10 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
             placeholder="https://apihub.agnes-ai.com/v1"
             onChange={(e) => setSettings({ baseUrl: e.target.value })}
           />
-          <p className="phint">兼容 OpenAI 协议。DeepSeek / 智谱 / Kimi / 通义都行。</p>
+          <p className="phint">
+            只要兼容 OpenAI 协议就能用：官方 API、第三方供应商、中转站、自建 OneAPI / NewAPI
+            都可以，直接填它的 <code>/v1</code> 地址。
+          </p>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             <span className="phint" style={{ margin: 0 }}>
               快捷填入：

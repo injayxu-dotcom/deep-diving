@@ -8,8 +8,15 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
  *
  * 安全：baseUrl 由客户端传入，天然是 SSRF 入口。浏览器并不阻止第三方站点向
  * localhost 发请求，所以哪怕只监听 127.0.0.1，恶意网页也能借这个入口去探测
- * 本机和内网服务（云元数据 169.254.169.254 尤其危险）。因此默认做三重收敛：
- * 协议 → 内网/回环地址 → 域名白名单。
+ * 本机和内网服务（云元数据 169.254.169.254 尤其危险）。因此做两道收敛：
+ * 协议 → 内网/回环地址。
+ *
+ * ⚠️ 这里**没有**公网域名白名单，是刻意的：
+ *   1. 白名单挡不住真正的危险 —— 危险的是内网段与云元数据，已经单独拦死；
+ *   2. 它只能挡住用户的合法服务商。中转站 / OneAPI / NewAPI 自建 / 海外聚合站
+ *      每天都在新增，枚举不过来；
+ *   3. 桌面版用户没有终端，`DD_ALLOWED_HOSTS` 这类环境变量对他们等于不存在。
+ * 端口本身已有随机 token + 只放行本应用渲染进程，公网域名不是这层的威胁模型。
  *
  * 两个宿主各自补一层：
  *   - Vite dev server：只能从本机 dev 页面访问，靠白名单即可
@@ -17,20 +24,6 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
  */
 
 export const AI_ENDPOINT = '/api/ai/chat';
-
-export const DEFAULT_ALLOWED_HOSTS = [
-  'api.deepseek.com',
-  'api.openai.com',
-  'open.bigmodel.cn',
-  'api.zhipuai.cn',
-  'apihub.agnes-ai.com',
-  'aihubmix.com',
-  'dashscope.aliyuncs.com',
-  'api.moonshot.cn',
-  'api.siliconflow.cn',
-  'generativelanguage.googleapis.com',
-  'api.anthropic.com',
-];
 
 const PRIVATE_HOST =
   /^(localhost|127\.|0\.0\.0\.0|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|::1|fc00:|fd[0-9a-f]{2}:|fe80:)/i;
@@ -47,14 +40,6 @@ const PRIVATE_HOST =
  * `localhost$` 也是。它们在修复前后行为一致，这里一并留在测试里钉住。
  */
 const LOOPBACK = /^(localhost|127\.|0\.0\.0\.0|::1)/i;
-
-function allowedHosts(): Set<string> {
-  const extra = (process.env.DD_ALLOWED_HOSTS || '')
-    .split(',')
-    .map((s) => s.trim().toLowerCase())
-    .filter(Boolean);
-  return new Set([...DEFAULT_ALLOWED_HOSTS, ...extra]);
-}
 
 /** 多模态请求会带 base64 图片，体积比纯文本大一到两个数量级 */
 const MAX_BODY = 25 * 1024 * 1024;
@@ -87,8 +72,6 @@ export function sendJson(res: ServerResponse, status: number, payload: unknown) 
 export interface NormalizeOptions {
   /** 允许回环地址（本机 Ollama / LM Studio）。默认读环境变量 DD_ALLOW_LOCALHOST */
   allowLocalhost?: boolean;
-  /** 跳过域名白名单（调试用，桌面端不开） */
-  allowAnyHost?: boolean;
 }
 
 /** 导出为纯函数（无副作用），便于单独校验 baseUrl 的归一化规则 */
@@ -102,7 +85,6 @@ export function normalizeUrl(base: string, opts: NormalizeOptions = {}): string 
   if (u.username || u.password) throw new Error('baseUrl 不允许携带认证信息');
 
   const allowLocal = opts.allowLocalhost ?? process.env.DD_ALLOW_LOCALHOST === '1';
-  const allowAny = opts.allowAnyHost ?? process.env.DD_ALLOW_ANY_HOST === '1';
 
   const host = u.hostname.toLowerCase().replace(/^\[|\]$/g, '');
   if (LOOPBACK.test(host)) {
@@ -116,11 +98,8 @@ export function normalizeUrl(base: string, opts: NormalizeOptions = {}): string 
        放开它等于把这个本地端口变成现成的跳板。
        回环（127.x / localhost / ::1）与它们是两回事，走上面那个开关。 */
     throw new Error(`baseUrl 指向内网 / 保留地址（${host}），已拒绝`);
-  } else if (!allowAny && !allowedHosts().has(host)) {
-    throw new Error(
-      `服务商域名 ${host} 不在允许列表。如需使用，请设环境变量：DD_ALLOWED_HOSTS=${host}`,
-    );
   }
+  // 其余公网地址一律放行：中转站 / 自建 OneAPI / 任意 OpenAI 兼容端点
   return u.toString();
 }
 
