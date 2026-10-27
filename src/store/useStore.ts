@@ -40,6 +40,7 @@ import {
   clarifyTurnPrompt,
   comboCreatePrompt,
   comboScorePrompt,
+  culturalPoolPrompt,
   deepDivePrompt,
   fissionPrompt,
   kanoPrompt,
@@ -2073,10 +2074,44 @@ export const useStore = create<State>((rawSet, get) => {
         nodeId,
         `「${parentLabel}」× ${dimName} 裂变`,
         async () => {
+        // 文化隐喻走两步：先把候选池收窄到共同记忆里，再从池子里挑同构最强的。
+        // 直接让模型「找个和种子同构的典故」，等于放它去整个典籍库里做最优匹配，
+        // 而越冷门的典故语义颗粒度越细、越容易刚好贴上某个属性，结果必然一路往偏里走。
+        // 先摆池子再挑，是机制上的修复。
+        let pool: { source: string; type?: string; story?: string; shared?: string[] }[] = [];
+        if (dim === 'cultural') {
+          try {
+            const pp = culturalPoolPrompt(parentLabel, brief);
+            const p = await chatJSON<{
+              pool?: { source?: string; type?: string; story?: string; shared?: string[] }[];
+            }>({
+              settings,
+              maxTokens: 4096,
+              messages: [
+                { role: 'system', content: pp.system },
+                { role: 'user', content: pp.user },
+              ],
+            });
+            pool = (p?.pool ?? [])
+              .filter((x) => x?.source?.trim())
+              .slice(0, 14)
+              .map((x) => ({
+                source: (x.source ?? '').trim(),
+                type: x.type,
+                story: x.story,
+                shared: x.shared,
+              }));
+            log('info', `候选池 ${pool.length} 条：${pool.map((x) => x.source).join('、')}`);
+          } catch (e) {
+            // 池子拿不到就退回单步。宁可这次更容易跑偏，也别让整次裂变失败。
+            log('warn', `候选池生成失败，本次跳过收窄：${e instanceof Error ? e.message : String(e)}`);
+          }
+        }
         const { system, user } = fissionPrompt(parentLabel, dim, brief, {
           parentDim: parent.data.dim,
           parentWhy: parent.data.detail || parent.data.seedWhy,
           existing,
+          pool,
         });
         return chatJSON<{ words: { word: string; why: string; dir?: string }[] }>({
           settings,

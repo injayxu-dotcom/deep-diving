@@ -158,7 +158,7 @@ export const DIMENSIONS: Dimension[] = [
   { key: 'visual',   name: '视觉联想', desc: '轮廓 / 负形 / 密度 / 光学',    example: '从种子的可见特征出发，转成图形操作与画面结果' },
   { key: 'ontic',    name: '本体延伸', desc: '沿同一属性再挖一层',           example: '沿结构、材料、形成过程或状态变化，再追到可见结果' },
   { key: 'sensory',  name: '感官通感', desc: '非视觉感官 → 视觉转译',        example: '非视觉感受 → 对应理由 → 具体视觉处理' },
-  { key: 'cultural', name: '文化隐喻', desc: '有出处的典故、神话、名物',     example: '可查证的出处 → 关键情节 → 与种子属性的同构点' },
+  { key: 'cultural', name: '文化隐喻', desc: '共同记忆里的故事与符号',       example: '来源要熟 → 交出一条关系（不是寓意）→ 与种子的同构点' },
   { key: 'opposite', name: '反义对冲', desc: '同一属性轴上的极端对立',       example: '明确属性轴 → 种子所在端与对立端 → 张力理由' },
   { key: 'phono',    name: '谐音字形', desc: '读音同近、字形拆解',           example: '选定的字 / 音节 / 部件 → 真实关系 → 可画物象' },
 ];
