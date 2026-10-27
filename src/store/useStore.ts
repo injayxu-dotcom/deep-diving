@@ -49,6 +49,7 @@ import {
   visionDimPrompt,
 } from '../lib/prompts';
 import { DIMENSIONS, LINK_META, VISION_DIMS, NOTE_W } from '../types';
+import { screenPhonoWords } from '../lib/fissionFilter';
 import { loadState, saveState, type Persisted } from '../lib/storage';
 import { loadSnaps, saveSnaps, SNAP_CAP } from '../lib/storage';
 import { asNum, asText } from '../lib/sanitize';
@@ -2079,6 +2080,9 @@ export const useStore = create<State>((rawSet, get) => {
         });
         return chatJSON<{ words: { word: string; why: string; dir?: string }[] }>({
           settings,
+          // 谐音维度的判据最多（换字、还原、读音、出处、双读），推理型模型光想就要
+          // 上万 token，8192 会整段空回。给足预算，别让用户拿到空白。
+          maxTokens: 16384,
           messages: [
             { role: 'system', content: system },
             { role: 'user', content: user },
@@ -2090,7 +2094,29 @@ export const useStore = create<State>((rawSet, get) => {
       patchNode(nodeId, { fissionDim: undefined });
       if (!res?.words?.length) return;
 
-      const words = res.words.filter((w) => w.word && w.word.trim()).slice(0, 8);
+      let picked = res.words.filter((w) => w.word && w.word.trim());
+      // 谐音维度多一道机械筛选：模型会把自己的违规写进 why，命中就丢弃。
+      // 其余五个维度不筛——那几条判据（必须换字、原句要有出处）是谐音特有的。
+      if (dim === 'phono') {
+        const { kept, dropped } = screenPhonoWords(parentLabel, picked);
+        picked = kept;
+        if (dropped.length) {
+          const sample = dropped
+            .slice(0, 3)
+            .map((d) => `「${d.word}」${d.reason}`)
+            .join('；');
+          const rest = dropped.length > 3 ? ` 等 ${dropped.length} 条` : '';
+          log(
+            'warn',
+            picked.length
+              ? `谐音维度筛掉 ${dropped.length} 条站不住的结果（${sample}${rest}）。这不是出错——它们在读音或原句上确实不成立。要更多可以再点一次裂变`
+              : `谐音维度这一批 ${dropped.length} 条全部不成立，没有留下结果（${sample}${rest}）。这不是出错，是这一批确实没凑出合格的换字——再点一次裂变会重新生成`,
+          );
+        }
+      }
+
+      const words = picked.slice(0, 8);
+      if (!words.length) return;
       // 重新取一次状态：await 期间用户可能拖动了父节点或新增了别的节点，
       // 用旧快照算出的扇区会歪，也会漏掉期间新增的障碍。
       const fresh = get().nodes;

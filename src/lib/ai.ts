@@ -390,6 +390,11 @@ const RATELIMIT_RE = /429|rate limit|too many requests|qps|concurrency|请求过
 
 export async function chat(opts: ChatOptions): Promise<string> {
   let retried = 0;
+  // 推理型模型（deepseek-r1 / agnes 等）会把输出预算先花在思考上，正文可能一个字
+  // 都没吐。此时 finish_reason 是 length，重试同样的预算只会再演一次，必须抬高上限。
+  // 只补一次：真跑不完说明这个模型不适合这条任务，继续加预算只是烧钱。
+  let budget = opts.maxTokens;
+  let budgetBumped = false;
 
   for (;;) {
     // 每次调用套一层超时守卫：流挂起不再等于永远转圈（见 guard 上方注释）
@@ -410,7 +415,11 @@ export async function chat(opts: ChatOptions): Promise<string> {
     };
 
     try {
-      return await chatAttempt(inner);
+      const text = await chatAttempt({ ...inner, maxTokens: budget });
+      if (text.trim() || gotToken || budgetBumped) return text;
+      budgetBumped = true;
+      budget = Math.min(Math.max((budget ?? 8192) * 2, 16384), 32768);
+      continue;
     } catch (e) {
       if (g.timedOut()) {
         const idleS = Math.round(IDLE_TIMEOUT_MS / 1000);
@@ -630,6 +639,54 @@ function repairTruncatedJSON(s: string): string | null {
   return s.slice(start, safeEnd).replace(/[,\s]+$/, '') + safeStack.slice().reverse().join('');
 }
 
+/**
+ * 模型在字符串里直接引原句时，经常不转义双引号：
+ *   "why":"取"散"sàn → 原句"烟消云散"…"
+ * 这会让 JSON 的字符串状态机错位，而它不是截断，repairTruncatedJSON 修不了。
+ *
+ * 判定方式：字符串里遇到的引号，只有后面紧跟 , : } ] 或已到结尾才算真闭合；
+ * 后面跟着汉字、字母等内容的，是引号当字面量用，补成 \"。
+ * 判定有一定猜测成分，所以只在正常解析失败后才用——猜错时下一次解析也会失败，
+ * 退回原来的报错，不会把坏结果当成好结果。
+ */
+function escapeBareQuotes(s: string): string {
+  let out = '';
+  let inStr = false;
+  let esc = false;
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (esc) {
+      out += ch;
+      esc = false;
+      continue;
+    }
+    if (ch === '\\') {
+      out += ch;
+      esc = true;
+      continue;
+    }
+    if (ch !== '"') {
+      out += ch;
+      continue;
+    }
+    if (!inStr) {
+      inStr = true;
+      out += ch;
+      continue;
+    }
+    let j = i + 1;
+    while (j < s.length && /\s/.test(s[j])) j++;
+    const next = s[j];
+    if (next === undefined || next === ',' || next === ':' || next === '}' || next === ']') {
+      inStr = false;
+      out += ch;
+    } else {
+      out += '\\"';
+    }
+  }
+  return out;
+}
+
 export function extractJSON<T>(raw: string, allowRepair = false): T {
   let s = raw.trim();
 
@@ -640,6 +697,13 @@ export function extractJSON<T>(raw: string, allowRepair = false): T {
   // 尝试直接解析
   try {
     return JSON.parse(s) as T;
+  } catch {
+    /* 继续尝试截断提取 */
+  }
+
+  // 字符串里有未转义引号 —— 补上后再试一次
+  try {
+    return JSON.parse(escapeBareQuotes(s)) as T;
   } catch {
     /* 继续尝试截断提取 */
   }
@@ -662,10 +726,15 @@ export function extractJSON<T>(raw: string, allowRepair = false): T {
       else if (ch === close) {
         depth--;
         if (depth === 0) {
+          const slice = s.slice(start, i + 1);
           try {
-            return JSON.parse(s.slice(start, i + 1)) as T;
+            return JSON.parse(slice) as T;
           } catch {
-            break;
+            try {
+              return JSON.parse(escapeBareQuotes(slice)) as T;
+            } catch {
+              break;
+            }
           }
         }
       }
