@@ -40,7 +40,10 @@ const TAB_META: { key: Tab; label: string; icon: 'gauge' | 'doc' | 'wand' | 'ima
 /** 判断一个节点有没有可展开的详情——没有就不给展开入口，避免空盒子 */
 export function nodeHasDetail(d: FlowNode['data']): boolean {
   return (
-    !!d.score || !!d.brief || !!d.prompts || !!d.visual || !!d.images?.length || !!d.combo
+    !!d.score || !!d.brief || !!d.prompts || !!d.visual || !!d.images?.length || !!d.combo ||
+    // 刚裂变出来的词只有 why（存在 detail 里），之前没算进来，于是正文被截两行、
+    // 却连「详情」按钮都不出现——用户没有任何入口能读完。
+    !!d.detail || !!d.seedWhy
   );
 }
 
@@ -416,6 +419,63 @@ function NodeBodyInner({ node }: { node: FlowNode }) {
  * 展开/收起按钮。常驻在节点右下角——
  * 只在选中时才给入口的话，用户得先点中再点开，多一步。
  */
+/**
+ * 卡片正文 + 「展开全文」。
+ *
+ * 收起态锁两行是为了画布节奏，但推导两行写不完时用户必须能读完——之前这里没有任何
+ * 入口：`nodeHasDetail` 不认 `detail`，连「详情」按钮都不渲染，正文被切了就只能靠猜。
+ * 现在就地铺开，不改选中态、不跳详情面板。
+ *
+ * 按钮只在真的溢出时出现：用 useLayoutEffect + ResizeObserver 量 scrollHeight，
+ * 短文本不该白占一行。
+ */
+export function WhyText({ text, className = 'nd-why' }: { text: string; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const [overflow, setOverflow] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      if (open) return; // 展开态本来就不该溢出，这时候量会把按钮误收掉
+      setOverflow(el.scrollHeight - el.clientHeight > 2);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [open, text]);
+
+  return (
+    <>
+      <div
+        ref={ref}
+        className={`${className}${open ? ' full' : ''}`}
+        // 展开后正文自己有滚动条，滚轮不能再传给画布（否则一滚就跑偏画布缩放）
+        onWheel={(e) => {
+          if (open) e.stopPropagation();
+        }}
+      >
+        {text}
+      </div>
+      {overflow || open ? (
+        <button
+          className="nd-more"
+          // 不拦 mousedown 会被当成节点拖拽的起点
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }}
+        >
+          {open ? '收起' : '展开全文'}
+        </button>
+      ) : null}
+    </>
+  );
+}
+
 export function DetailToggle({ id, open }: { id: string; open: boolean }) {
   const toggleExpand = useStore((s) => s.toggleExpand);
   return (

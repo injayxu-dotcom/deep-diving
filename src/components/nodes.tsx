@@ -17,7 +17,7 @@ import { useLinkedImages } from '../lib/links';
 import { QUADRANT_NAME } from '../lib/scoring';
 import { Icon, type IconName } from './Icon';
 import { useCopy } from './RightPanel';
-import { DetailToggle, NodeBody, nodeHasDetail } from './NodeBody';
+import { DetailToggle, NodeBody, WhyText, nodeHasDetail } from './NodeBody';
 
 function Spinner() {
   return <span className="spin" aria-label="AI 生成中" />;
@@ -325,7 +325,7 @@ export function SeedNode({ id, data, selected }: NodeProps<FlowNode>) {
         {data.busy ? <Spinner /> : null}
         {data.busy ? busyText(data) : '种子 · 点下方按钮开始裂变'}
       </div>
-      {data.seedWhy ? <div className="nd-why nd-seedwhy">{data.seedWhy}</div> : null}
+      {data.seedWhy ? <WhyText text={data.seedWhy} className="nd-why nd-seedwhy" /> : null}
       {data.plan ? <PlanBar plan={data.plan} /> : null}
       {data.images?.length ? <Thumbs images={data.images} /> : null}
       {data.palette?.length ? <Palette colors={data.palette} /> : null}
@@ -382,7 +382,7 @@ export function WordNode({ id, data, selected }: NodeProps<FlowNode>) {
           <Spinner /> {busyText(data)}
         </div>
       ) : data.detail ? (
-        <div className="nd-why">{data.detail}</div>
+        <WhyText text={data.detail} />
       ) : null}
       {data.images?.length ? <Thumbs images={data.images} /> : null}
       {data.palette?.length ? <Palette colors={data.palette} /> : null}
