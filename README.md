@@ -1,7 +1,7 @@
 # 创意深潜 Deep Diving
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Release](https://img.shields.io/github/v/release/injayxu-dotcom/deep-diving?label=download)](https://github.com/injayxu-dotcom/deep-diving/releases/latest)
+[![Release](https://img.shields.io/github/v/release/Youyu-studio/deep-diving?label=download)](https://github.com/Youyu-studio/deep-diving/releases/latest)
 
 > 在思维的海洋中下潜，打捞灵感珍珠。
 
@@ -25,7 +25,7 @@ AI 驱动的视觉设计师认知工作台。无限画布 + 真实 LLM 接口，
 
 ## 下载安装（普通用户看这里）
 
-去 [Releases](https://github.com/injayxu-dotcom/deep-diving/releases) 下载，**不需要装 Node、不需要命令行**：
+去 [Releases](https://github.com/Youyu-studio/deep-diving/releases) 下载，**不需要装 Node、不需要命令行**：
 
 | 文件 | 适用 | 说明 |
 | :--- | :--- | :--- |
